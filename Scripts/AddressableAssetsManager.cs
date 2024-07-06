@@ -60,6 +60,36 @@ namespace Insthync.AddressableAssetTools
             s_assetRefs[assetRef.RuntimeKey] = handler;
             return handlerResult;
         }
+        
+        public static async Task<TType> GetOrLoadAssetAsyncOrUsePrefab<TType>(this AssetReference assetRef, TType prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
+            where TType : Component
+        {
+            if (assetRef.IsDataValid())
+                prefab = await assetRef.GetOrLoadAssetAsync<TType>(handlerCallback);
+            return prefab;
+        }
+        
+        public static TType GetOrLoadAssetOrUsePrefab<TType>(this AssetReference assetRef, TType prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
+            where TType : Component
+        {
+            if (assetRef.IsDataValid())
+                prefab = assetRef.GetOrLoadAsset<TType>(handlerCallback);
+            return prefab;
+        }
+        
+        public static async Task<GameObject> GetOrLoadAssetAsyncOrUsePrefab(this AssetReference assetRef, GameObject prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
+        {
+            if (assetRef.IsDataValid())
+                prefab = await assetRef.GetOrLoadAssetAsync(handlerCallback);
+            return prefab;
+        }
+        
+        public static GameObject GetOrLoadAssetOrUsePrefab(this AssetReference assetRef, GameObject prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
+        {
+            if (assetRef.IsDataValid())
+                prefab = assetRef.GetOrLoadAsset(handlerCallback);
+            return prefab;
+        }
 
         public static void Release<TAssetRef>(this TAssetRef assetRef)
             where TAssetRef : AssetReference
