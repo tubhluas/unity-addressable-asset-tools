@@ -8,8 +8,8 @@ namespace Insthync.AddressableAssetTools
 {
     public static class AddressableAssetsManager
     {
-        private static Dictionary<object, GameObject> s_loadedAssets = new Dictionary<object, GameObject>();
-        private static Dictionary<object, AsyncOperationHandle> s_assetRefs = new Dictionary<object, AsyncOperationHandle>();
+        private static readonly Dictionary<object, GameObject> s_loadedAssets = new Dictionary<object, GameObject>();
+        private static readonly Dictionary<object, AsyncOperationHandle> s_assetRefs = new Dictionary<object, AsyncOperationHandle>();
 
         public static async Task<TType> GetOrLoadAssetAsync<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Component
@@ -18,7 +18,15 @@ namespace Insthync.AddressableAssetTools
                 return result.GetComponent<TType>();
             AsyncOperationHandle<GameObject> handler = Addressables.LoadAssetAsync<GameObject>(assetRef.RuntimeKey);
             handlerCallback?.Invoke(handler);
-            GameObject handlerResult = await handler.Task;
+            GameObject handlerResult;
+            try
+            {
+                handlerResult = await handler.Task;
+            }
+            catch
+            {
+                return null;
+            }
             s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
             s_assetRefs[assetRef.RuntimeKey] = handler;
             return handlerResult.GetComponent<TType>();
@@ -31,7 +39,15 @@ namespace Insthync.AddressableAssetTools
                 return result.GetComponent<TType>();
             AsyncOperationHandle<GameObject> handler = Addressables.LoadAssetAsync<GameObject>(assetRef.RuntimeKey);
             handlerCallback?.Invoke(handler);
-            GameObject handlerResult = handler.WaitForCompletion();
+            GameObject handlerResult;
+            try
+            {
+                handlerResult = handler.WaitForCompletion();
+            }
+            catch
+            {
+                return null;
+            }
             s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
             s_assetRefs[assetRef.RuntimeKey] = handler;
             return handlerResult.GetComponent<TType>();
@@ -43,7 +59,15 @@ namespace Insthync.AddressableAssetTools
                 return result;
             AsyncOperationHandle<GameObject> handler = Addressables.LoadAssetAsync<GameObject>(assetRef.RuntimeKey);
             handlerCallback?.Invoke(handler);
-            GameObject handlerResult = await handler.Task;
+            GameObject handlerResult;
+            try
+            {
+                handlerResult = await handler.Task;
+            }
+            catch
+            {
+                return null;
+            }
             s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
             s_assetRefs[assetRef.RuntimeKey] = handler;
             return handlerResult;
@@ -55,7 +79,15 @@ namespace Insthync.AddressableAssetTools
                 return result;
             AsyncOperationHandle<GameObject> handler = Addressables.LoadAssetAsync<GameObject>(assetRef.RuntimeKey);
             handlerCallback?.Invoke(handler);
-            GameObject handlerResult = handler.WaitForCompletion();
+            GameObject handlerResult;
+            try
+            {
+                handlerResult = handler.WaitForCompletion();
+            }
+            catch
+            {
+                return null;
+            }
             s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
             s_assetRefs[assetRef.RuntimeKey] = handler;
             return handlerResult;
@@ -65,14 +97,8 @@ namespace Insthync.AddressableAssetTools
             where TType : Component
         {
             TType tempPrefab = null;
-            try
-            {
+            if (assetRef.IsDataValid())
                 tempPrefab = await assetRef.GetOrLoadAssetAsync<TType>(handlerCallback);
-            }
-            catch
-            {
-                // ignored
-            }
             if (tempPrefab == null)
                 tempPrefab = prefab;
             return tempPrefab;
@@ -82,14 +108,8 @@ namespace Insthync.AddressableAssetTools
             where TType : Component
         {
             TType tempPrefab = null;
-            try
-            {
+            if (assetRef.IsDataValid())
                 tempPrefab = assetRef.GetOrLoadAsset<TType>(handlerCallback);
-            }
-            catch
-            {
-                // ignored
-            }
             if (tempPrefab == null)
                 tempPrefab = prefab;
             return tempPrefab;
@@ -98,14 +118,8 @@ namespace Insthync.AddressableAssetTools
         public static async Task<GameObject> GetOrLoadAssetAsyncOrUsePrefab(this AssetReference assetRef, GameObject prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
             GameObject tempPrefab = null;
-            try
-            {
+            if (assetRef.IsDataValid())
                 tempPrefab = await assetRef.GetOrLoadAssetAsync(handlerCallback);
-            }
-            catch
-            {
-                // ignored
-            }
             if (tempPrefab == null)
                 tempPrefab = prefab;
             return tempPrefab;
@@ -114,14 +128,8 @@ namespace Insthync.AddressableAssetTools
         public static GameObject GetOrLoadAssetOrUsePrefab(this AssetReference assetRef, GameObject prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
             GameObject tempPrefab = null;
-            try
-            {
+            if (assetRef.IsDataValid())
                 tempPrefab = assetRef.GetOrLoadAsset(handlerCallback);
-            }
-            catch
-            {
-                // ignored
-            }
             if (tempPrefab == null)
                 tempPrefab = prefab;
             return tempPrefab;
