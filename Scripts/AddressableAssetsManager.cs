@@ -64,31 +64,67 @@ namespace Insthync.AddressableAssetTools
         public static async Task<TType> GetOrLoadAssetAsyncOrUsePrefab<TType>(this AssetReference assetRef, TType prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Component
         {
-            if (assetRef.IsDataValid())
-                prefab = await assetRef.GetOrLoadAssetAsync<TType>(handlerCallback);
-            return prefab;
+            TType tempPrefab = null;
+            try
+            {
+                tempPrefab = await assetRef.GetOrLoadAssetAsync<TType>(handlerCallback);
+            }
+            catch
+            {
+                // ignored
+            }
+            if (tempPrefab == null)
+                tempPrefab = prefab;
+            return tempPrefab;
         }
         
         public static TType GetOrLoadAssetOrUsePrefab<TType>(this AssetReference assetRef, TType prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Component
         {
-            if (assetRef.IsDataValid())
-                prefab = assetRef.GetOrLoadAsset<TType>(handlerCallback);
-            return prefab;
+            TType tempPrefab = null;
+            try
+            {
+                tempPrefab = assetRef.GetOrLoadAsset<TType>(handlerCallback);
+            }
+            catch
+            {
+                // ignored
+            }
+            if (tempPrefab == null)
+                tempPrefab = prefab;
+            return tempPrefab;
         }
         
         public static async Task<GameObject> GetOrLoadAssetAsyncOrUsePrefab(this AssetReference assetRef, GameObject prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
-            if (assetRef.IsDataValid())
-                prefab = await assetRef.GetOrLoadAssetAsync(handlerCallback);
-            return prefab;
+            GameObject tempPrefab = null;
+            try
+            {
+                tempPrefab = await assetRef.GetOrLoadAssetAsync(handlerCallback);
+            }
+            catch
+            {
+                // ignored
+            }
+            if (tempPrefab == null)
+                tempPrefab = prefab;
+            return tempPrefab;
         }
         
         public static GameObject GetOrLoadAssetOrUsePrefab(this AssetReference assetRef, GameObject prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
-            if (assetRef.IsDataValid())
-                prefab = assetRef.GetOrLoadAsset(handlerCallback);
-            return prefab;
+            GameObject tempPrefab = null;
+            try
+            {
+                tempPrefab = assetRef.GetOrLoadAsset(handlerCallback);
+            }
+            catch
+            {
+                // ignored
+            }
+            if (tempPrefab == null)
+                tempPrefab = prefab;
+            return tempPrefab;
         }
 
         public static void Release<TAssetRef>(this TAssetRef assetRef)
