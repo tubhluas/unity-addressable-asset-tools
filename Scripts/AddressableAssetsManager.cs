@@ -135,6 +135,48 @@ namespace Insthync.AddressableAssetTools
             return tempPrefab;
         }
 
+        public static async Task<TType[]> GetOrLoadAssetsAsync<TType>(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
+            where TType : Component
+        {
+            List<Task<TType>> tasks = new List<Task<TType>>();
+            foreach (AssetReference assetRef in assetRefs)
+            {
+                tasks.Add(assetRef.GetOrLoadAssetAsync<TType>(handlerCallback));
+            }
+            return await Task.WhenAll(tasks);
+        }
+
+        public static TType[] GetOrLoadAssets<TType>(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
+            where TType : Component
+        {
+            List<TType> results = new List<TType>();
+            foreach (AssetReference assetRef in assetRefs)
+            {
+                results.Add(assetRef.GetOrLoadAsset<TType>(handlerCallback));
+            }
+            return results.ToArray();
+        }
+        
+        public static async Task<GameObject[]> GetOrLoadAssetsAsync(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
+        {
+            List<Task<GameObject>> tasks = new List<Task<GameObject>>();
+            foreach (AssetReference assetRef in assetRefs)
+            {
+                tasks.Add(assetRef.GetOrLoadAssetAsync(handlerCallback));
+            }
+            return await Task.WhenAll(tasks);
+        }
+
+        public static GameObject[] GetOrLoadAssets(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
+        {
+            List<GameObject> results = new List<GameObject>();
+            foreach (AssetReference assetRef in assetRefs)
+            {
+                results.Add(assetRef.GetOrLoadAsset(handlerCallback));
+            }
+            return results.ToArray();
+        }
+        
         public static void Release<TAssetRef>(this TAssetRef assetRef)
             where TAssetRef : AssetReference
         {
