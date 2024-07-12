@@ -8,17 +8,17 @@ namespace Insthync.AddressableAssetTools
 {
     public static class AddressableAssetsManager
     {
-        private static readonly Dictionary<object, GameObject> s_loadedAssets = new Dictionary<object, GameObject>();
+        private static readonly Dictionary<object, Object> s_loadedAssets = new Dictionary<object, Object>();
         private static readonly Dictionary<object, AsyncOperationHandle> s_assetRefs = new Dictionary<object, AsyncOperationHandle>();
 
-        public static async Task<TType> GetOrLoadAssetAsync<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
-            where TType : Component
+        public static async Task<TType> GetOrLoadObjectAsync<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
+            where TType : Object
         {
-            if (s_loadedAssets.TryGetValue(assetRef.RuntimeKey, out GameObject result))
-                return result.GetComponent<TType>();
-            AsyncOperationHandle<GameObject> handler = Addressables.LoadAssetAsync<GameObject>(assetRef.RuntimeKey);
+            if (s_loadedAssets.TryGetValue(assetRef.RuntimeKey, out Object result))
+                return result as TType;
+            AsyncOperationHandle<TType> handler = Addressables.LoadAssetAsync<TType>(assetRef.RuntimeKey);
             handlerCallback?.Invoke(handler);
-            GameObject handlerResult;
+            TType handlerResult;
             try
             {
                 handlerResult = await handler.Task;
@@ -29,68 +29,56 @@ namespace Insthync.AddressableAssetTools
             }
             s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
             s_assetRefs[assetRef.RuntimeKey] = handler;
-            return handlerResult.GetComponent<TType>();
+            return handlerResult;
+        }
+
+        public static TType GetOrLoadObject<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
+            where TType : Object
+        {
+            if (s_loadedAssets.TryGetValue(assetRef.RuntimeKey, out Object result))
+                return result as TType;
+            AsyncOperationHandle<TType> handler = Addressables.LoadAssetAsync<TType>(assetRef.RuntimeKey);
+            handlerCallback?.Invoke(handler);
+            TType handlerResult;
+            try
+            {
+                handlerResult = handler.WaitForCompletion();
+            }
+            catch
+            {
+                return null;
+            }
+            s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
+            s_assetRefs[assetRef.RuntimeKey] = handler;
+            return handlerResult;
+        }
+
+        public static async Task<TType> GetOrLoadAssetAsync<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
+            where TType : Component
+        {
+            GameObject loadedObject = await assetRef.GetOrLoadAssetAsync(handlerCallback);
+            if (loadedObject != null)
+                return loadedObject.GetComponent<TType>();
+            return null;
         }
 
         public static TType GetOrLoadAsset<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Component
         {
-            if (s_loadedAssets.TryGetValue(assetRef.RuntimeKey, out GameObject result))
-                return result.GetComponent<TType>();
-            AsyncOperationHandle<GameObject> handler = Addressables.LoadAssetAsync<GameObject>(assetRef.RuntimeKey);
-            handlerCallback?.Invoke(handler);
-            GameObject handlerResult;
-            try
-            {
-                handlerResult = handler.WaitForCompletion();
-            }
-            catch
-            {
-                return null;
-            }
-            s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
-            s_assetRefs[assetRef.RuntimeKey] = handler;
-            return handlerResult.GetComponent<TType>();
+            GameObject loadedObject = assetRef.GetOrLoadAsset(handlerCallback);
+            if (loadedObject != null)
+                return loadedObject.GetComponent<TType>();
+            return null;
         }
 
         public static async Task<GameObject> GetOrLoadAssetAsync(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
-            if (s_loadedAssets.TryGetValue(assetRef.RuntimeKey, out GameObject result))
-                return result;
-            AsyncOperationHandle<GameObject> handler = Addressables.LoadAssetAsync<GameObject>(assetRef.RuntimeKey);
-            handlerCallback?.Invoke(handler);
-            GameObject handlerResult;
-            try
-            {
-                handlerResult = await handler.Task;
-            }
-            catch
-            {
-                return null;
-            }
-            s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
-            s_assetRefs[assetRef.RuntimeKey] = handler;
-            return handlerResult;
+            return await assetRef.GetOrLoadObjectAsync<GameObject>(handlerCallback);
         }
 
         public static GameObject GetOrLoadAsset(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
-            if (s_loadedAssets.TryGetValue(assetRef.RuntimeKey, out GameObject result))
-                return result;
-            AsyncOperationHandle<GameObject> handler = Addressables.LoadAssetAsync<GameObject>(assetRef.RuntimeKey);
-            handlerCallback?.Invoke(handler);
-            GameObject handlerResult;
-            try
-            {
-                handlerResult = handler.WaitForCompletion();
-            }
-            catch
-            {
-                return null;
-            }
-            s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
-            s_assetRefs[assetRef.RuntimeKey] = handler;
-            return handlerResult;
+            return assetRef.GetOrLoadObject<GameObject>(handlerCallback);
         }
         
         public static async Task<TType> GetOrLoadAssetAsyncOrUsePrefab<TType>(this AssetReference assetRef, TType prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
