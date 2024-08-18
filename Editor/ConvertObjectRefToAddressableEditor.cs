@@ -101,7 +101,15 @@ namespace Insthync.AddressableAssetTools
                 AddressableAssetConversionAttribute attr = foundAttr[0] as AddressableAssetConversionAttribute;
                 if (!string.IsNullOrWhiteSpace(attr.ConvertFunctionName))
                 {
-                    // TODO: get function to proceed conversion
+                    MethodInfo methodInfo = objectType.GetMethod(attr.ConvertFunctionName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (methodInfo != null)
+                    {
+                        methodInfo.Invoke(asset, new object[]
+                        {
+                            field.GetValue(asset),
+                            attr.AddressableVarName,
+                        });
+                    }
                     continue;
                 }
                 AddressableEditorUtils.ConvertObjectRefToAddressable(asset, field.Name, attr.AddressableVarName, _groupName);
