@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
@@ -11,7 +12,7 @@ namespace Insthync.AddressableAssetTools
 {
     public static partial class AddressableEditorUtils
     {
-        private static void CreateSettings()
+        public static void CreateSettings()
         {
             if (!AddressableAssetSettingsDefaultObject.SettingsExists)
             {
@@ -19,7 +20,7 @@ namespace Insthync.AddressableAssetTools
             }
         }
 
-        private static AddressableAssetGroup CreateGroup(string name)
+        public static AddressableAssetGroup CreateGroup(string name)
         {
             CreateSettings();
 
@@ -67,23 +68,47 @@ namespace Insthync.AddressableAssetTools
             string guid = AssetDatabase.AssetPathToGUID(objPath);
             settings.CreateOrMoveEntry(guid, targetGroup, false, false);
             Debug.Log($"{obj.name} is moved to group: {groupName}.");
-            aa = (TAssetRef)System.Activator.CreateInstance(typeof(TAssetRef), new object[]
+            object aaObject;
+            if (typeof(TAssetRef) == typeof(AssetReferenceSprite))
             {
-                guid,
-            });
+                Sprite spr = obj as Sprite;
+                AssetReferenceSprite aaSpr = new AssetReferenceSprite(guid);
+                aaSpr.SetEditorSubObject(spr);
+                aaObject = aaSpr;
+            }
+            else if (typeof(TAssetRef) == typeof(AssetReferenceAudioClip))
+            {
+                AudioClip clip = obj as AudioClip;
+                AssetReferenceAudioClip aaClip = new AssetReferenceAudioClip(clip);
+                aaObject = aaClip;
+            }
+            else
+            {
+                aaObject = System.Activator.CreateInstance(typeof(TAssetRef), new object[]
+                {
+                    guid,
+                });
+            }
+            aa = (TAssetRef)aaObject;
             obj = null;
         }
 
-        public static void ConvertObjectRefToAddressable(Object asset, string objFieldName, string aaFieldName, string groupName = "Default Local Group")
+        public static void ConvertObjectRefToAddressable(object source, string objFieldName, string aaFieldName, string groupName = "Default Local Group")
         {
-            if (asset == null)
+            if (source == null)
                 return;
             if (string.IsNullOrWhiteSpace(groupName))
                 groupName = "Default Local Group";
-            System.Type objectType = asset.GetType();
-            FieldInfo objFieldInfo = objectType.GetField(objFieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            FieldInfo aaFieldInfo = objectType.GetField(aaFieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            Object obj = objFieldInfo.GetValue(asset) as Object;
+            System.Type objectType = source.GetType();
+            BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            FieldInfo objFieldInfo = objectType.GetField(objFieldName, flags);
+            FieldInfo aaFieldInfo = objectType.GetField(aaFieldName, flags);
+            if (objFieldInfo == null || objFieldInfo.GetValue(source) == null)
+            {
+                Debug.LogWarning($"Skipping object: {objFieldName} it is null.");
+                return;
+            }
+            Object obj = objFieldInfo.GetValue(source) as Object;
             if (obj == null)
             {
                 Debug.LogWarning($"Skipping object: {objFieldName} not an assets.");
@@ -107,11 +132,30 @@ namespace Insthync.AddressableAssetTools
             string guid = AssetDatabase.AssetPathToGUID(objPath);
             settings.CreateOrMoveEntry(guid, targetGroup, false, false);
             Debug.Log($"{obj.name} is moved to group: {groupName}.");
-            aaFieldInfo.SetValue(asset, System.Activator.CreateInstance(aaFieldInfo.FieldType, new object[]
+            object aaObject;
+            if (aaFieldInfo.FieldType == typeof(AssetReferenceSprite))
             {
-                guid,
-            }));
-            objFieldInfo.SetValue(asset, null);
+                Sprite spr = obj as Sprite;
+                AssetReferenceSprite aaSpr = new AssetReferenceSprite(guid);
+                aaSpr.SetEditorSubObject(spr);
+                aaObject = aaSpr;
+            }
+            else if (aaFieldInfo.FieldType == typeof(AssetReferenceAudioClip))
+            {
+                AudioClip clip = obj as AudioClip;
+                AssetReferenceAudioClip aaClip = new AssetReferenceAudioClip(clip);
+                aaObject = aaClip;
+            }
+            else
+            {
+                aaObject = System.Activator.CreateInstance(aaFieldInfo.FieldType, new object[]
+                {
+                    guid,
+                });
+            }
+            aaFieldInfo.SetValue(source, aaObject);
+            objFieldInfo.SetValue(source, null);
         }
     }
 }
+#endif
