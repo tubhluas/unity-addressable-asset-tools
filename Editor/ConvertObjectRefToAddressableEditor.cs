@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets;
 using System.Reflection;
+using System.Collections;
 
 namespace Insthync.AddressableAssetTools
 {
@@ -84,6 +85,25 @@ namespace Insthync.AddressableAssetTools
                 Convert(_selectedAssets[i]);
             }
         }
+        private bool IsListOrArray(System.Type type, out System.Type itemType)
+        {
+            if (type.IsArray)
+            {
+                itemType = type.GetElementType();
+                return true;
+            }
+            foreach (System.Type interfaceType in type.GetInterfaces())
+            {
+                if (interfaceType.IsGenericType &&
+                    interfaceType.GetGenericTypeDefinition() == typeof(IList<>))
+                {
+                    itemType = type.GetGenericArguments()[0];
+                    return true;
+                }
+            }
+            itemType = null;
+            return false;
+        }
 
         private void Convert(Object asset)
         {
@@ -92,28 +112,44 @@ namespace Insthync.AddressableAssetTools
             if (string.IsNullOrWhiteSpace(_groupName) && _selectedGroup != null)
                 _groupName = _selectedGroup.Name;
             System.Type objectType = asset.GetType();
-            List<FieldInfo> fields = new List<FieldInfo>(objectType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance));
-            foreach (FieldInfo field in fields)
+            BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            do
             {
-                object[] foundAttr = field.GetCustomAttributes(typeof(AddressableAssetConversionAttribute), false);
-                if (foundAttr.Length <= 0)
-                    continue;
-                AddressableAssetConversionAttribute attr = foundAttr[0] as AddressableAssetConversionAttribute;
-                if (!string.IsNullOrWhiteSpace(attr.ConvertFunctionName))
+                List<FieldInfo> fields = new List<FieldInfo>(objectType.GetFields(flags));
+                foreach (FieldInfo field in fields)
                 {
-                    MethodInfo methodInfo = objectType.GetMethod(attr.ConvertFunctionName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (methodInfo != null)
+                    object[] foundAttr = field.GetCustomAttributes(typeof(AddressableAssetConversionAttribute), false);
+                    if (foundAttr.Length > 0)
                     {
-                        methodInfo.Invoke(asset, new object[]
-                        {
-                            field.GetValue(asset),
-                            attr.AddressableVarName,
-                        });
+                        AddressableAssetConversionAttribute attr = foundAttr[0] as AddressableAssetConversionAttribute;
+                        AddressableEditorUtils.ConvertObjectRefToAddressable(asset, field.Name, attr.AddressableVarName, _groupName);
+                        continue;
                     }
-                    continue;
+                    System.Type interfaceType = field.FieldType.GetInterface(nameof(IAddressableAssetConversable));
+                    if (interfaceType != null)
+                    {
+                        MethodInfo methodInfo = interfaceType.GetMethod("ProceedAddressableAssetConversion", flags);
+                        methodInfo.Invoke(asset, new object[0]);
+                        continue;
+                    }
+                    if (IsListOrArray(field.FieldType, out System.Type elementType))
+                    {
+                        interfaceType = elementType.GetInterface(nameof(IAddressableAssetConversable));
+                        if (interfaceType != null)
+                        {
+                            IList list = field.GetValue(asset) as IList;
+                            for (int i = 0; i < list.Count; ++i)
+                            {
+                                object entry = list[i];
+                                MethodInfo methodInfo = interfaceType.GetMethod("ProceedAddressableAssetConversion", flags);
+                                methodInfo.Invoke(entry, new object[0]);
+                                list[i] = entry;
+                            }
+                        }
+                    }
                 }
-                AddressableEditorUtils.ConvertObjectRefToAddressable(asset, field.Name, attr.AddressableVarName, _groupName);
-            }
+                objectType = objectType.BaseType;
+            } while (objectType.BaseType != null);
             EditorUtility.SetDirty(asset);
         }
     }
