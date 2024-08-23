@@ -1,8 +1,10 @@
 using Cysharp.Threading.Tasks;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.Events;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -32,36 +34,31 @@ namespace Insthync.AddressableAssetTools
         {
             await UniTask.Yield();
             onStart?.Invoke();
+            Addressables.InitializeAsync().WaitForCompletion();
+            HashSet<object> keys = new HashSet<object>();
+            foreach (IResourceLocator resourceLocator in Addressables.ResourceLocators)
+            {
+                foreach (object key in resourceLocator.Keys)
+                {
+                    keys.Add(key);
+                }
+            }
+            AsyncOperationHandle<IList<IResourceLocation>> resourceLocationsAsyncOp = Addressables.LoadResourceLocationsAsync(keys, Addressables.MergeMode.Union);
+            await resourceLocationsAsyncOp.Task;
+
             AsyncOperationHandle<AddressableAssetDownloadManagerSettings> settingsAsyncOp = settingsAssetReference.LoadAssetAsync();
             await settingsAsyncOp.Task;
             AddressableAssetDownloadManagerSettings settings = settingsAsyncOp.Result;
-            TotalCount = settings.PrepareObjects.Count + settings.InitialObjects.Count;
+            TotalCount = 1 + settings.InitialObjects.Count;
 
             // Downloads
-            for (int i = 0; i < settings.PrepareObjects.Count; ++i)
-            {
-                if (settings.PrepareObjects[i] == null ||
-                    !settings.PrepareObjects[i].IsDataValid())
-                {
-                    // Invalid data
-                    continue;
-                }
-                try
-                {
-                    await Download(
-                        settings.PrepareObjects[i],
-                        OnFileSizeRetrieving,
-                        OnFileSizeRetrieved,
-                        OnDepsDownloading,
-                        OnDepsFileDownloading,
-                        OnDepsDownloaded);
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.LogException(ex);
-                }
-                LoadedCount++;
-            }
+            await DownloadMany(resourceLocationsAsyncOp.Result,
+                OnFileSizeRetrieving,
+                OnFileSizeRetrieved,
+                OnDepsDownloading,
+                OnDepsFileDownloading,
+                OnDepsDownloaded);
+            LoadedCount++;
             for (int i = 0; i < settings.InitialObjects.Count; ++i)
             {
                 if (settings.InitialObjects[i] == null ||
@@ -221,6 +218,64 @@ namespace Insthync.AddressableAssetTools
                 try
                 {
                     downloadOp = Addressables.DownloadDependenciesAsync(runtimeKey);
+                    await UniTask.Yield();
+                    onDepsDownloading?.Invoke();
+                    while (!downloadOp.IsDone)
+                    {
+                        await UniTask.Yield();
+                        float percentageComplete = downloadOp.GetDownloadStatus().Percent;
+                        onDepsFileDownloading?.Invoke((long)(percentageComplete * fileSize), fileSize, percentageComplete);
+                    }
+                }
+                catch
+                {
+                    return;
+                }
+                await UniTask.Yield();
+                onDepsDownloaded?.Invoke();
+                Addressables.ReleaseInstance(downloadOp);
+            }
+            else
+            {
+                onDepsDownloading?.Invoke();
+                onDepsFileDownloading?.Invoke(0, 0, 1);
+                onDepsDownloaded?.Invoke();
+            }
+        }
+
+        public static async Task DownloadMany(
+            IEnumerable runtimeKeys,
+            System.Action onFileSizeRetrieving,
+            AddressableAssetFileSizeDelegate onFileSizeRetrieved,
+            System.Action onDepsDownloading,
+            AddressableAssetDownloadProgressDelegate onDepsFileDownloading,
+            System.Action onDepsDownloaded)
+        {
+            // Get download size
+            AsyncOperationHandle<long> getSizeOp;
+            try
+            {
+                getSizeOp = Addressables.GetDownloadSizeAsync(runtimeKeys);
+                onFileSizeRetrieving?.Invoke();
+                while (!getSizeOp.IsDone)
+                {
+                    await UniTask.Yield();
+                }
+            }
+            catch
+            {
+                return;
+            }
+            await UniTask.Yield();
+            long fileSize = getSizeOp.Result;
+            onFileSizeRetrieved.Invoke(fileSize);
+            // Download dependencies
+            if (fileSize > 0)
+            {
+                AsyncOperationHandle downloadOp;
+                try
+                {
+                    downloadOp = Addressables.DownloadDependenciesAsync(runtimeKeys);
                     await UniTask.Yield();
                     onDepsDownloading?.Invoke();
                     while (!downloadOp.IsDone)

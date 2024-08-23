@@ -8,11 +8,7 @@ namespace Insthync.AddressableAssetTools
     public class AddressableAssetDownloadManagerSettings : ScriptableObject
     {
         [SerializeField]
-        protected List<AssetReference> prepareObjects = new List<AssetReference>();
-        [SerializeField]
         protected List<AssetReference> initialObjects = new List<AssetReference>();
-
-        public virtual List<AssetReference> PrepareObjects => prepareObjects;
         public virtual List<AssetReference> InitialObjects => initialObjects;
     }
 }
