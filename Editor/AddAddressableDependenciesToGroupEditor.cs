@@ -32,7 +32,7 @@ namespace Insthync.AddressableAssetTools
                 EditorGUILayout.HelpBox("Addressable Asset Settings not found!", MessageType.Error);
                 return;
             }
-
+            _selectedGroup = (AddressableAssetGroup)EditorGUILayout.ObjectField("Target Group", _selectedGroup, typeof(AddressableAssetGroup), false);
             EditorGUILayout.Space();
 
             GUILayout.Label("Selected Assets:", EditorStyles.boldLabel);
