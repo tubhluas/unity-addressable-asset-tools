@@ -1,6 +1,7 @@
 using Cysharp.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -35,20 +36,18 @@ namespace Insthync.AddressableAssetTools
             await UniTask.Yield();
             onStart?.Invoke();
             Addressables.InitializeAsync().WaitForCompletion();
-            HashSet<object> keys = new HashSet<object>();
-            foreach (IResourceLocator resourceLocator in Addressables.ResourceLocators)
-            {
-                foreach (object key in resourceLocator.Keys)
-                {
-                    keys.Add(key);
-                }
-            }
+
+            HashSet<object> keys = Addressables.ResourceLocators
+                .SelectMany(o => o.Keys)
+                .ToHashSet();
+                
             AsyncOperationHandle<IList<IResourceLocation>> resourceLocationsAsyncOp = Addressables.LoadResourceLocationsAsync(keys, Addressables.MergeMode.Union);
             await resourceLocationsAsyncOp.Task;
 
             AsyncOperationHandle<AddressableAssetDownloadManagerSettings> settingsAsyncOp = settingsAssetReference.LoadAssetAsync();
             await settingsAsyncOp.Task;
             AddressableAssetDownloadManagerSettings settings = settingsAsyncOp.Result;
+            Addressables.Release(settingsAsyncOp);
             TotalCount = 1 + settings.InitialObjects.Count;
 
             // Downloads
@@ -58,6 +57,8 @@ namespace Insthync.AddressableAssetTools
                 OnDepsDownloading,
                 OnDepsFileDownloading,
                 OnDepsDownloaded);
+            Addressables.Release(resourceLocationsAsyncOp);
+
             LoadedCount++;
             for (int i = 0; i < settings.InitialObjects.Count; ++i)
             {
