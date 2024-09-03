@@ -129,7 +129,10 @@ namespace Insthync.AddressableAssetTools
                     if (interfaceType != null)
                     {
                         MethodInfo methodInfo = interfaceType.GetMethod("ProceedAddressableAssetConversion", flags);
-                        methodInfo.Invoke(asset, new object[0]);
+                        methodInfo.Invoke(field.GetValue(asset), new object[]
+                        {
+                            _groupName
+                        });
                         continue;
                     }
                     if (IsListOrArray(field.FieldType, out System.Type elementType))
@@ -142,7 +145,10 @@ namespace Insthync.AddressableAssetTools
                             {
                                 object entry = list[i];
                                 MethodInfo methodInfo = interfaceType.GetMethod("ProceedAddressableAssetConversion", flags);
-                                methodInfo.Invoke(entry, new object[0]);
+                                methodInfo.Invoke(entry, new object[]
+                                {
+                                    _groupName
+                                });
                                 list[i] = entry;
                             }
                         }
