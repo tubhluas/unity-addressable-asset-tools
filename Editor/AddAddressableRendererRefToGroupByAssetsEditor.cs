@@ -7,26 +7,25 @@ using UnityEngine.UI;
 
 namespace Insthync.AddressableAssetTools
 {
-    public class AddAddressableRendererRefToGroupEditor : EditorWindow
+    public class AddAddressableRendererRefToGroupByAssetsEditor : EditorWindow
     {
         private AddressableAssetSettings _settings;
         private AddressableAssetGroup _selectedGroup;
-        private AddressableAssetGroup _dirtySelectedGroup;
         private List<Object> _selectedAssets = new List<Object>();
         private List<string> _dependencyPaths = new List<string>();
         private Dictionary<string, bool> _dependencySelection = new Dictionary<string, bool>();
         private Vector2 _assetsScrollPosition;
         private Vector2 _dependenciesScrollPosition;
 
-        [MenuItem("Tools/Addressables/Add Renderer Ref to Group")]
+        [MenuItem("Tools/Addressables/Add Renderer Ref to Group By Assets")]
         public static void ShowWindow()
         {
-            GetWindow<AddAddressableRendererRefToGroupEditor>("Add Renderer Ref to Group");
+            GetWindow<AddAddressableRendererRefToGroupEditor>("Add Renderer Ref to Group By Assets");
         }
 
         private void OnGUI()
         {
-            GUILayout.Label("Add Renderer Ref to Group", EditorStyles.boldLabel);
+            GUILayout.Label("Add Renderer Ref to Group By Assets", EditorStyles.boldLabel);
 
             _settings = AddressableAssetSettingsDefaultObject.Settings;
             if (_settings == null)
@@ -35,19 +34,6 @@ namespace Insthync.AddressableAssetTools
                 return;
             }
             _selectedGroup = (AddressableAssetGroup)EditorGUILayout.ObjectField("Target Group", _selectedGroup, typeof(AddressableAssetGroup), false);
-            if (_dirtySelectedGroup != _selectedGroup)
-            {
-                _dirtySelectedGroup = _selectedGroup;
-                _selectedAssets.Clear();
-                if (_selectedGroup != null)
-                {
-                    var entries = _selectedGroup.entries;
-                    foreach (var entry in entries)
-                    {
-                        _selectedAssets.Add(entry.TargetAsset);
-                    }
-                }
-            }
             EditorGUILayout.Space();
 
             GUILayout.Label("Selected Assets:", EditorStyles.boldLabel);
@@ -58,9 +44,28 @@ namespace Insthync.AddressableAssetTools
             {
                 EditorGUILayout.BeginHorizontal();
                 _selectedAssets[i] = EditorGUILayout.ObjectField(_selectedAssets[i], typeof(Object), false);
+                if (GUILayout.Button("Remove", GUILayout.Width(60)))
+                {
+                    _selectedAssets.RemoveAt(i);
+                }
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndScrollView();
+
+            if (GUILayout.Button("Add Asset"))
+            {
+                _selectedAssets.Add(null);
+            }
+
+            if (GUILayout.Button("Add Selected Assets (In Project Tab)"))
+            {
+                _selectedAssets.AddRange(Selection.objects);
+            }
+
+            if (GUILayout.Button("Clear Assets"))
+            {
+                _selectedAssets.Clear();
+            }
 
             EditorGUILayout.Space();
 
