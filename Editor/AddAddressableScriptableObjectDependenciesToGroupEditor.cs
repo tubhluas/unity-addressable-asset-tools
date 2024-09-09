@@ -3,29 +3,29 @@ using UnityEditor;
 using UnityEngine;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets;
-using UnityEngine.UI;
 
 namespace Insthync.AddressableAssetTools
 {
-    public class AddAddressableRendererRefToGroupByAssetsEditor : EditorWindow
+    public class AddAddressableScriptableObjectDependenciesToGroupEditor : EditorWindow
     {
         private AddressableAssetSettings _settings;
         private AddressableAssetGroup _selectedGroup;
+        private AddressableAssetGroup _dirtySelectedGroup;
         private List<Object> _selectedAssets = new List<Object>();
         private List<string> _dependencyPaths = new List<string>();
         private Dictionary<string, bool> _dependencySelection = new Dictionary<string, bool>();
         private Vector2 _assetsScrollPosition;
         private Vector2 _dependenciesScrollPosition;
 
-        [MenuItem("Tools/Addressables/Add Renderer Ref to Group By Assets")]
+        [MenuItem("Tools/Addressables/Add Scriptable Object Dependencies to Group By Assets")]
         public static void ShowWindow()
         {
-            GetWindow<AddAddressableRendererRefToGroupEditor>("Add Renderer Ref to Group By Assets");
+            GetWindow<AddAddressableScriptableObjectDependenciesToGroupEditor>("Add Scriptable Object Dependencies to Group By Assets");
         }
 
         private void OnGUI()
         {
-            GUILayout.Label("Add Renderer Ref to Group By Assets", EditorStyles.boldLabel);
+            GUILayout.Label("Add Scriptable Object Dependencies to Group By Assets", EditorStyles.boldLabel);
 
             _settings = AddressableAssetSettingsDefaultObject.Settings;
             if (_settings == null)
@@ -34,6 +34,19 @@ namespace Insthync.AddressableAssetTools
                 return;
             }
             _selectedGroup = (AddressableAssetGroup)EditorGUILayout.ObjectField("Target Group", _selectedGroup, typeof(AddressableAssetGroup), false);
+            if (_dirtySelectedGroup != _selectedGroup)
+            {
+                _dirtySelectedGroup = _selectedGroup;
+                _selectedAssets.Clear();
+                if (_selectedGroup != null)
+                {
+                    var entries = _selectedGroup.entries;
+                    foreach (var entry in entries)
+                    {
+                        _selectedAssets.Add(entry.TargetAsset);
+                    }
+                }
+            }
             EditorGUILayout.Space();
 
             GUILayout.Label("Selected Assets:", EditorStyles.boldLabel);
@@ -122,118 +135,28 @@ namespace Insthync.AddressableAssetTools
             foreach (var asset in _selectedAssets)
             {
                 if (asset == null) continue;
-                Component comp = asset as Component;
-                GameObject gameObject = asset as GameObject;
 
-                List<MeshFilter> meshFilters = new List<MeshFilter>();
-                List<MeshRenderer> meshRenderers = new List<MeshRenderer>();
-                List<SkinnedMeshRenderer> skinnedMeshRenderers = new List<SkinnedMeshRenderer>();
-                List<SpriteRenderer> spriteRenderers = new List<SpriteRenderer>();
-                List<Image> images = new List<Image>();
-                List<RawImage> rawImages = new List<RawImage>();
-                if (comp)
-                {
-                    meshFilters.AddRange(comp.GetComponentsInChildren<MeshFilter>(true));
-                    meshRenderers.AddRange(comp.GetComponentsInChildren<MeshRenderer>(true));
-                    skinnedMeshRenderers.AddRange(comp.GetComponentsInChildren<SkinnedMeshRenderer>(true));
-                    spriteRenderers.AddRange(comp.GetComponentsInChildren<SpriteRenderer>(true));
-                    images.AddRange(comp.GetComponentsInChildren<Image>(true));
-                    rawImages.AddRange(comp.GetComponentsInChildren<RawImage>(true));
-                }
-                if (gameObject)
-                {
-                    meshFilters.AddRange(gameObject.GetComponentsInChildren<MeshFilter>(true));
-                    meshRenderers.AddRange(gameObject.GetComponentsInChildren<MeshRenderer>(true));
-                    skinnedMeshRenderers.AddRange(gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true));
-                    spriteRenderers.AddRange(gameObject.GetComponentsInChildren<SpriteRenderer>(true));
-                    images.AddRange(gameObject.GetComponentsInChildren<Image>(true));
-                    rawImages.AddRange(gameObject.GetComponentsInChildren<RawImage>(true));
-                }
+                string assetPath = AssetDatabase.GetAssetPath(asset);
+                string[] dependencies = AssetDatabase.GetDependencies(assetPath, true);
 
-                foreach (var meshFilter in meshFilters)
+                foreach (var dependencyPath in dependencies)
                 {
-                    AddToDependency(meshFilter.sharedMesh);
-                }
+                    // Exclude the asset itself, source code files, and dependencies already in another group
+                    if (dependencyPath == assetPath || IsInOtherAddressableGroup(dependencyPath))
+                        continue;
 
-                foreach (var meshRenderer in meshRenderers)
-                {
-                    AddMaterialToDependency(meshRenderer.sharedMaterials);
-                }
-
-                foreach (var meshRenderer in meshRenderers)
-                {
-                    AddMaterialToDependency(meshRenderer.sharedMaterials);
-                }
-
-                foreach (var skinnedMeshRenderer in skinnedMeshRenderers)
-                {
-                    AddMaterialToDependency(skinnedMeshRenderer.sharedMaterials);
-                    AddToDependency(skinnedMeshRenderer.sharedMesh);
-                }
-
-                foreach (var spriteRenderer in spriteRenderers)
-                {
-                    AddToDependency(spriteRenderer.sprite);
-                }
-
-                foreach (var image in images)
-                {
-                    AddToDependency(image.sprite);
-                }
-
-                foreach (var rawImage in rawImages)
-                {
-                    AddToDependency(rawImage.texture);
+                    Object obj = AssetDatabase.LoadAssetAtPath<Object>(dependencyPath);
+                    bool isScriptableObjectDependencies = obj is ScriptableObject;
+                    if (isScriptableObjectDependencies && !_dependencyPaths.Contains(dependencyPath))
+                    {
+                        _dependencyPaths.Add(dependencyPath);
+                        _dependencySelection[dependencyPath] = true; // Default to selected
+                    }
                 }
             }
 
             // Sort dependencies by path
             _dependencyPaths.Sort();
-        }
-
-        private void AddToDependency(Object asset)
-        {
-            if (!asset)
-                return;
-            string assetPath = AssetDatabase.GetAssetPath(asset);
-            if (!_dependencyPaths.Contains(assetPath))
-            {
-                _dependencyPaths.Add(assetPath);
-                _dependencySelection[assetPath] = true; // Default to selected
-            }
-        }
-
-        private void AddToDependency(IList<Object> assets)
-        {
-            foreach (var asset in assets)
-            {
-                AddToDependency(asset);
-            }
-        }
-
-        private void AddMaterialToDependency(Material asset)
-        {
-            if (!asset)
-                return;
-            string assetPath = AssetDatabase.GetAssetPath(asset);
-            if (!_dependencyPaths.Contains(assetPath))
-            {
-                _dependencyPaths.Add(assetPath);
-                _dependencySelection[assetPath] = true; // Default to selected
-            }
-            string[] names = asset.GetTexturePropertyNames();
-            foreach (string name in names)
-            {
-                AddToDependency(asset.GetTexture(name));
-            }
-        }
-
-        private void AddMaterialToDependency(IList<Material> assets)
-        {
-            foreach (var asset in assets)
-            {
-                AddMaterialToDependency(asset);
-            }
         }
 
         private bool IsInOtherAddressableGroup(string dependencyPath)

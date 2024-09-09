@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.Events;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -47,6 +46,7 @@ namespace Insthync.AddressableAssetTools
             AsyncOperationHandle<AddressableAssetDownloadManagerSettings> settingsAsyncOp = settingsAssetReference.LoadAssetAsync();
             await settingsAsyncOp.Task;
             AddressableAssetDownloadManagerSettings settings = settingsAsyncOp.Result;
+            settingsAssetReference.ReleaseAsset();
             Addressables.Release(settingsAsyncOp);
             TotalCount = 1 + settings.InitialObjects.Count;
 

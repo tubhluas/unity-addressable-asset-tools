@@ -23,22 +23,17 @@ namespace Insthync.AddressableAssetTools
 
         public new AsyncOperationHandle<TComponent> InstantiateAsync(Vector3 position, Quaternion rotation, Transform parent = null)
         {
-            return Addressables.ResourceManager.CreateChainOperation(Addressables.InstantiateAsync(RuntimeKey, position, rotation, parent, false), GetComponentChainOperation);
+            return Addressables.ResourceManager.CreateChainOperation(Addressables.InstantiateAsync(RuntimeKey, position, rotation, parent, false), AssetReferenceUtils.CreateGetComponentCompletedOperation<TComponent>);
         }
 
         public new AsyncOperationHandle<TComponent> InstantiateAsync(Transform parent = null, bool instantiateInWorldSpace = false)
         {
-            return Addressables.ResourceManager.CreateChainOperation(Addressables.InstantiateAsync(RuntimeKey, parent, instantiateInWorldSpace, false), GetComponentChainOperation);
+            return Addressables.ResourceManager.CreateChainOperation(Addressables.InstantiateAsync(RuntimeKey, parent, instantiateInWorldSpace, false), AssetReferenceUtils.CreateGetComponentCompletedOperation<TComponent>);
         }
 
         public AsyncOperationHandle<TComponent> LoadAssetAsync()
         {
-            return Addressables.ResourceManager.CreateChainOperation(base.LoadAssetAsync<GameObject>(), GetComponentChainOperation);
-        }
-
-        private static AsyncOperationHandle<TComponent> GetComponentChainOperation(AsyncOperationHandle<GameObject> handler)
-        {
-            return Addressables.ResourceManager.CreateCompletedOperation(handler.Result.GetComponent<TComponent>(), string.Empty);
+            return Addressables.ResourceManager.CreateChainOperation(base.LoadAssetAsync<GameObject>(), AssetReferenceUtils.CreateGetComponentCompletedOperation<TComponent>);
         }
 
         public override bool ValidateAsset(Object obj)

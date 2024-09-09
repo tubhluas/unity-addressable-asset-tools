@@ -10,6 +10,7 @@ namespace Insthync.AddressableAssetTools
     {
         private AddressableAssetSettings _settings;
         private AddressableAssetGroup _selectedGroup;
+        private AddressableAssetGroup _dirtySelectedGroup;
         private List<Object> _selectedAssets = new List<Object>();
         private List<string> _dependencyPaths = new List<string>();
         private Dictionary<string, bool> _dependencySelection = new Dictionary<string, bool>();
@@ -33,6 +34,19 @@ namespace Insthync.AddressableAssetTools
                 return;
             }
             _selectedGroup = (AddressableAssetGroup)EditorGUILayout.ObjectField("Target Group", _selectedGroup, typeof(AddressableAssetGroup), false);
+            if (_dirtySelectedGroup != _selectedGroup)
+            {
+                _dirtySelectedGroup = _selectedGroup;
+                _selectedAssets.Clear();
+                if (_selectedGroup != null)
+                {
+                    var entries = _selectedGroup.entries;
+                    foreach (var entry in entries)
+                    {
+                        _selectedAssets.Add(entry.TargetAsset);
+                    }
+                }
+            }
             EditorGUILayout.Space();
 
             GUILayout.Label("Selected Assets:", EditorStyles.boldLabel);

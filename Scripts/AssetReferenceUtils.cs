@@ -1,4 +1,6 @@
+using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace Insthync.AddressableAssetTools
 {
@@ -7,6 +9,11 @@ namespace Insthync.AddressableAssetTools
         public static bool IsDataValid(this AssetReference asset)
         {
             return asset != null && asset.RuntimeKeyIsValid();
+        }
+
+        public static AsyncOperationHandle<T> CreateGetComponentCompletedOperation<T>(AsyncOperationHandle<GameObject> handler)
+        {
+            return Addressables.ResourceManager.CreateCompletedOperation(handler.Result.GetComponent<T>(), string.Empty);
         }
     }
 }
