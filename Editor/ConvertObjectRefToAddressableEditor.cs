@@ -12,6 +12,7 @@ namespace Insthync.AddressableAssetTools
     {
         private AddressableAssetSettings _settings;
         private AddressableAssetGroup _selectedGroup;
+        private AddressableAssetGroup _dirtySelectedGroup;
         private string _groupName;
         private List<Object> _selectedAssets = new List<Object>();
         private Vector2 _assetsScrollPosition;
@@ -34,7 +35,23 @@ namespace Insthync.AddressableAssetTools
             }
 
             if (string.IsNullOrWhiteSpace(_groupName))
+            {
                 _selectedGroup = (AddressableAssetGroup)EditorGUILayout.ObjectField("Target Group", _selectedGroup, typeof(AddressableAssetGroup), false);
+                if (_dirtySelectedGroup != _selectedGroup)
+                {
+                    _dirtySelectedGroup = _selectedGroup;
+                    _selectedAssets.Clear();
+                    if (_selectedGroup != null)
+                    {
+                        var entries = _selectedGroup.entries;
+                        foreach (var entry in entries)
+                        {
+                            _selectedAssets.Add(entry.TargetAsset);
+                        }
+                    }
+                }
+                EditorGUILayout.Space();
+            }
             _groupName = EditorGUILayout.TextField("Target Group Name", _groupName);
 
             EditorGUILayout.Space();
@@ -85,25 +102,6 @@ namespace Insthync.AddressableAssetTools
                 Convert(_selectedAssets[i]);
             }
         }
-        private bool IsListOrArray(System.Type type, out System.Type itemType)
-        {
-            if (type.IsArray)
-            {
-                itemType = type.GetElementType();
-                return true;
-            }
-            foreach (System.Type interfaceType in type.GetInterfaces())
-            {
-                if (interfaceType.IsGenericType &&
-                    interfaceType.GetGenericTypeDefinition() == typeof(IList<>))
-                {
-                    itemType = type.GetGenericArguments()[0];
-                    return true;
-                }
-            }
-            itemType = null;
-            return false;
-        }
 
         private void Convert(Object asset)
         {
@@ -118,11 +116,19 @@ namespace Insthync.AddressableAssetTools
                 List<FieldInfo> fields = new List<FieldInfo>(objectType.GetFields(flags));
                 foreach (FieldInfo field in fields)
                 {
+                    System.Type tempElementType;
                     object[] foundAttr = field.GetCustomAttributes(typeof(AddressableAssetConversionAttribute), false);
                     if (foundAttr.Length > 0)
                     {
                         AddressableAssetConversionAttribute attr = foundAttr[0] as AddressableAssetConversionAttribute;
-                        AddressableEditorUtils.ConvertObjectRefToAddressable(asset, field.Name, attr.AddressableVarName, _groupName);
+                        if (AddressableEditorUtils.IsListOrArray(field.FieldType, out tempElementType))
+                        {
+                            AddressableEditorUtils.ConvertObjectRefsToAddressables(asset, field.Name, attr.AddressableVarName, _groupName);
+                        }
+                        else
+                        {
+                            AddressableEditorUtils.ConvertObjectRefToAddressable(asset, field.Name, attr.AddressableVarName, _groupName);
+                        }
                         continue;
                     }
                     System.Type interfaceType = field.FieldType.GetInterface(nameof(IAddressableAssetConversable));
@@ -135,21 +141,24 @@ namespace Insthync.AddressableAssetTools
                         });
                         continue;
                     }
-                    if (IsListOrArray(field.FieldType, out System.Type elementType))
+                    if (AddressableEditorUtils.IsListOrArray(field.FieldType, out tempElementType))
                     {
-                        interfaceType = elementType.GetInterface(nameof(IAddressableAssetConversable));
+                        interfaceType = tempElementType.GetInterface(nameof(IAddressableAssetConversable));
                         if (interfaceType != null)
                         {
                             IList list = field.GetValue(asset) as IList;
-                            for (int i = 0; i < list.Count; ++i)
+                            if (list != null && list.Count > 0)
                             {
-                                object entry = list[i];
-                                MethodInfo methodInfo = interfaceType.GetMethod("ProceedAddressableAssetConversion", flags);
-                                methodInfo.Invoke(entry, new object[]
+                                for (int i = 0; i < list.Count; ++i)
                                 {
+                                    object entry = list[i];
+                                    MethodInfo methodInfo = interfaceType.GetMethod("ProceedAddressableAssetConversion", flags);
+                                    methodInfo.Invoke(entry, new object[]
+                                    {
                                     _groupName
-                                });
-                                list[i] = entry;
+                                    });
+                                    list[i] = entry;
+                                }
                             }
                         }
                     }
