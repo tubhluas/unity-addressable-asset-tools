@@ -150,17 +150,16 @@ namespace Insthync.AddressableAssetTools
             objs = null;
         }
 
-        public static void ConvertObjectRefToAddressable(object source, string objFieldName, string aaFieldName, string groupName = "Default Local Group")
+        public static void ConvertObjectRefToAddressable(object source, System.Type sourceType, string objFieldName, string aaFieldName, string groupName = "Default Local Group")
         {
             if (source == null)
                 return;
             if (string.IsNullOrWhiteSpace(groupName))
                 groupName = "Default Local Group";
-            FixMissingAssetReference(source, aaFieldName, groupName);
-            System.Type objectType = source.GetType();
+            FixMissingAssetReference(source, sourceType, aaFieldName, groupName);
             BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-            FieldInfo objFieldInfo = objectType.GetField(objFieldName, flags);
-            FieldInfo aaFieldInfo = objectType.GetField(aaFieldName, flags);
+            FieldInfo objFieldInfo = sourceType.GetField(objFieldName, flags);
+            FieldInfo aaFieldInfo = sourceType.GetField(aaFieldName, flags);
             if (objFieldInfo == null || objFieldInfo.GetValue(source) == null)
             {
                 Debug.LogWarning($"Skipping object: {objFieldName} it is null.");
@@ -216,14 +215,23 @@ namespace Insthync.AddressableAssetTools
             objFieldInfo.SetValue(source, null);
         }
 
-        public static void ConvertObjectRefsToAddressables(object source, string objsFieldName, string aasFieldName, string groupName = "Default Local Group")
+        public static void ConvertObjectRefsToAddressables(object source, System.Type sourceType, string objsFieldName, string aasFieldName, string groupName = "Default Local Group")
         {
             if (source == null)
                 return;
-            System.Type objectType = source.GetType();
             BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-            FieldInfo objsFieldInfo = objectType.GetField(objsFieldName, flags);
-            FieldInfo aasFieldInfo = objectType.GetField(aasFieldName, flags);
+            FieldInfo objsFieldInfo = sourceType.GetField(objsFieldName, flags);
+            FieldInfo aasFieldInfo = sourceType.GetField(aasFieldName, flags);
+            if (objsFieldInfo == null)
+            {
+                Debug.LogError($"Unable to find ref field {objsFieldName}");
+                return;
+            }
+            if (aasFieldInfo == null)
+            {
+                Debug.LogError($"Unable to find addressable ref field {aasFieldName}");
+                return;
+            }
             if (!IsListOrArray(objsFieldInfo.FieldType, out System.Type objsItemType))
             {
                 Debug.LogError($"Objects field named {objsFieldName} not a list or array.");
@@ -304,16 +312,15 @@ namespace Insthync.AddressableAssetTools
             }
         }
 
-        public static void FixMissingAssetReference(object source, string aaFieldName, string groupName = "Default Local Group")
+        public static void FixMissingAssetReference(object source, System.Type sourceType, string aaFieldName, string groupName = "Default Local Group")
         {
             if (source == null)
             {
                 Debug.LogError("Unable to get source value.");
                 return;
             }
-            System.Type objectType = source.GetType();
             BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-            FieldInfo aaFieldInfo = objectType.GetField(aaFieldName, flags);
+            FieldInfo aaFieldInfo = sourceType.GetField(aaFieldName, flags);
             AssetReference aaVar;
             try
             {
@@ -345,6 +352,13 @@ namespace Insthync.AddressableAssetTools
                 targetGroup = CreateGroup(groupName);
             string guid = aaVar.AssetGUID;
             string path = AssetDatabase.GUIDToAssetPath(guid);
+            AddressableAssetEntry entry = settings.FindAssetEntry(guid);
+            if (entry != null)
+            {
+                groupName = entry.parentGroup.Name;
+                targetGroup = entry.parentGroup;
+                Debug.Log($"(FIX) Asset: {guid} from {path} is in group: {groupName}.");
+            }
             settings.CreateOrMoveEntry(guid, targetGroup, false, false);
             Debug.Log($"(FIX) Asset: {guid} from {path} is moved to group: {groupName}.");
             if (aaVar is AssetReferenceSprite aaSpr)

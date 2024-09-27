@@ -123,11 +123,11 @@ namespace Insthync.AddressableAssetTools
                         AddressableAssetConversionAttribute attr = foundAttr[0] as AddressableAssetConversionAttribute;
                         if (AddressableEditorUtils.IsListOrArray(field.FieldType, out tempElementType))
                         {
-                            AddressableEditorUtils.ConvertObjectRefsToAddressables(asset, field.Name, attr.AddressableVarName, _groupName);
+                            AddressableEditorUtils.ConvertObjectRefsToAddressables(asset, objectType, field.Name, attr.AddressableVarName, _groupName);
                         }
                         else
                         {
-                            AddressableEditorUtils.ConvertObjectRefToAddressable(asset, field.Name, attr.AddressableVarName, _groupName);
+                            AddressableEditorUtils.ConvertObjectRefToAddressable(asset, objectType, field.Name, attr.AddressableVarName, _groupName);
                         }
                         continue;
                     }

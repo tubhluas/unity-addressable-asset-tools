@@ -142,7 +142,7 @@ namespace Insthync.AddressableAssetTools
                 foreach (var dependencyPath in dependencies)
                 {
                     // Exclude the asset itself, source code files, and dependencies already in another group
-                    if (dependencyPath == assetPath || IsSourceCodeFile(dependencyPath) || IsInOtherAddressableGroup(dependencyPath))
+                    if (dependencyPath == assetPath || IsSourceCodeFile(dependencyPath) || IsInAnyAddressableGroup(dependencyPath))
                         continue;
 
                     if (!_dependencyPaths.Contains(dependencyPath))
@@ -162,13 +162,13 @@ namespace Insthync.AddressableAssetTools
             return path.EndsWith(".cs") || path.EndsWith(".js") || path.EndsWith(".boo");
         }
 
-        private bool IsInOtherAddressableGroup(string dependencyPath)
+        private bool IsInAnyAddressableGroup(string dependencyPath)
         {
             string guid = AssetDatabase.AssetPathToGUID(dependencyPath);
             AddressableAssetEntry entry = _settings.FindAssetEntry(guid);
 
-            // Return true if the asset is in a group and it's not the selected group
-            return entry != null && entry.parentGroup != _selectedGroup;
+            // Return true if the asset is in a group
+            return entry != null;
         }
 
         private void AddSelectedDependencies()
