@@ -15,6 +15,7 @@ namespace Insthync.AddressableAssetTools
         private List<string> _dependencyPaths = new List<string>();
         private Dictionary<string, bool> _dependencySelection = new Dictionary<string, bool>();
         private Vector2 _assetsScrollPosition;
+        private bool _excludeFromOtherGroups = true;
         private Vector2 _dependenciesScrollPosition;
 
         [MenuItem("Tools/Addressables/Add Dependencies to Group")]
@@ -82,6 +83,8 @@ namespace Insthync.AddressableAssetTools
 
             EditorGUILayout.Space();
 
+            _excludeFromOtherGroups = EditorGUILayout.Toggle("Exclude From Other Groups", _excludeFromOtherGroups);
+
             if (GUILayout.Button("Find Dependencies of Selected Assets"))
             {
                 FindDependencies();
@@ -142,14 +145,17 @@ namespace Insthync.AddressableAssetTools
                 foreach (var dependencyPath in dependencies)
                 {
                     // Exclude the asset itself, source code files, and dependencies already in another group
-                    if (dependencyPath == assetPath || IsSourceCodeFile(dependencyPath) || IsInAnyAddressableGroup(dependencyPath))
+                    if (dependencyPath == assetPath || IsSourceCodeFile(dependencyPath))
                         continue;
 
-                    if (!_dependencyPaths.Contains(dependencyPath))
-                    {
-                        _dependencyPaths.Add(dependencyPath);
-                        _dependencySelection[dependencyPath] = true; // Default to selected
-                    }
+                    if (_dependencyPaths.Contains(dependencyPath))
+                        continue;
+
+                    if (_excludeFromOtherGroups && IsInAnyAddressableGroup(dependencyPath))
+                        continue;
+
+                    _dependencyPaths.Add(dependencyPath);
+                    _dependencySelection[dependencyPath] = true; // Default to selected
                 }
             }
 

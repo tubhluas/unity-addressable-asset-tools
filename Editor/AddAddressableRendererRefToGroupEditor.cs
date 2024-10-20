@@ -145,13 +145,17 @@ namespace Insthync.AddressableAssetTools
                     if (dependencyPath == assetPath || IsInAnyAddressableGroup(dependencyPath))
                         continue;
 
+                    if (_dependencyPaths.Contains(dependencyPath))
+                        continue;
+
                     Object obj = AssetDatabase.LoadAssetAtPath<Object>(dependencyPath);
-                    bool isRendererDependencies = obj is Mesh || obj is Material || obj is Sprite || obj is Texture;
-                    if (isRendererDependencies && !_dependencyPaths.Contains(dependencyPath))
-                    {
-                        _dependencyPaths.Add(dependencyPath);
-                        _dependencySelection[dependencyPath] = true; // Default to selected
-                    }
+                    bool isRendererDependencies = obj is Mesh || obj is Material || obj is Sprite || obj is Texture || obj is Shader || 
+                        (obj is GameObject && dependencyPath.ToLower().EndsWith("fbx")) || (obj is GameObject && dependencyPath.ToLower().EndsWith("obj"));
+                    if (!isRendererDependencies)
+                        continue;
+
+                    _dependencyPaths.Add(dependencyPath);
+                    _dependencySelection[dependencyPath] = true; // Default to selected
                 }
             }
 

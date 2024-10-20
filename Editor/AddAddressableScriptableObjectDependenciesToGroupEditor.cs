@@ -15,6 +15,7 @@ namespace Insthync.AddressableAssetTools
         private List<string> _dependencyPaths = new List<string>();
         private Dictionary<string, bool> _dependencySelection = new Dictionary<string, bool>();
         private Vector2 _assetsScrollPosition;
+        private bool _excludeFromOtherGroups = true;
         private Vector2 _dependenciesScrollPosition;
 
         [MenuItem("Tools/Addressables/Add Scriptable Object Dependencies to Group By Assets")]
@@ -82,6 +83,8 @@ namespace Insthync.AddressableAssetTools
 
             EditorGUILayout.Space();
 
+            _excludeFromOtherGroups = EditorGUILayout.Toggle("Exclude From Other Groups", _excludeFromOtherGroups);
+
             if (GUILayout.Button("Find Dependencies of Selected Assets"))
             {
                 FindDependencies();
@@ -142,16 +145,22 @@ namespace Insthync.AddressableAssetTools
                 foreach (var dependencyPath in dependencies)
                 {
                     // Exclude the asset itself, source code files, and dependencies already in another group
-                    if (dependencyPath == assetPath || IsInAnyAddressableGroup(dependencyPath))
+                    if (dependencyPath == assetPath)
+                        continue;
+
+                    if (_dependencyPaths.Contains(dependencyPath))
+                        continue;
+
+                    if (_excludeFromOtherGroups && IsInAnyAddressableGroup(dependencyPath))
                         continue;
 
                     Object obj = AssetDatabase.LoadAssetAtPath<Object>(dependencyPath);
                     bool isScriptableObjectDependencies = obj is ScriptableObject;
-                    if (isScriptableObjectDependencies && !_dependencyPaths.Contains(dependencyPath))
-                    {
-                        _dependencyPaths.Add(dependencyPath);
-                        _dependencySelection[dependencyPath] = true; // Default to selected
-                    }
+                    if (!isScriptableObjectDependencies)
+                        continue;
+
+                    _dependencyPaths.Add(dependencyPath);
+                    _dependencySelection[dependencyPath] = true; // Default to selected
                 }
             }
 
