@@ -284,6 +284,7 @@ namespace Insthync.AddressableAssetTools
             }
             catch (System.Exception ex)
             {
+                Debug.LogException(ex);
                 onError?.Invoke(ex);
                 return;
             }
@@ -308,6 +309,7 @@ namespace Insthync.AddressableAssetTools
                 }
                 catch (System.Exception ex)
                 {
+                    Debug.LogException(ex);
                     onError?.Invoke(ex);
                     return;
                 }
@@ -345,6 +347,7 @@ namespace Insthync.AddressableAssetTools
             }
             catch (System.Exception ex)
             {
+                Debug.LogException(ex);
                 onError?.Invoke(ex);
                 return;
             }
@@ -369,6 +372,7 @@ namespace Insthync.AddressableAssetTools
                 }
                 catch (System.Exception ex)
                 {
+                    Debug.LogException(ex);
                     onError?.Invoke(ex);
                     return;
                 }
