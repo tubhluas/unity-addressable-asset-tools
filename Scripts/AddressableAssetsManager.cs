@@ -8,9 +8,14 @@ namespace Insthync.AddressableAssetTools
 {
     public static class AddressableAssetsManager
     {
+        private static readonly Dictionary<object, Object> s_loadedAssets = new Dictionary<object, Object>();
+        private static readonly Dictionary<object, AsyncOperationHandle> s_assetRefs = new Dictionary<object, AsyncOperationHandle>();
+
         public static async Task<TType> GetOrLoadObjectAsync<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Object
         {
+            if (s_loadedAssets.TryGetValue(assetRef.RuntimeKey, out Object result))
+                return result as TType;
             AsyncOperationHandle<TType> handler = Addressables.LoadAssetAsync<TType>(assetRef.RuntimeKey);
             handlerCallback?.Invoke(handler);
             TType handlerResult;
@@ -22,12 +27,16 @@ namespace Insthync.AddressableAssetTools
             {
                 return null;
             }
+            s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
+            s_assetRefs[assetRef.RuntimeKey] = handler;
             return handlerResult;
         }
 
         public static TType GetOrLoadObject<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Object
         {
+            if (s_loadedAssets.TryGetValue(assetRef.RuntimeKey, out Object result))
+                return result as TType;
             AsyncOperationHandle<TType> handler = Addressables.LoadAssetAsync<TType>(assetRef.RuntimeKey);
             handlerCallback?.Invoke(handler);
             TType handlerResult;
@@ -39,6 +48,8 @@ namespace Insthync.AddressableAssetTools
             {
                 return null;
             }
+            s_loadedAssets[assetRef.RuntimeKey] = handlerResult;
+            s_assetRefs[assetRef.RuntimeKey] = handler;
             return handlerResult;
         }
 
@@ -47,10 +58,7 @@ namespace Insthync.AddressableAssetTools
         {
             GameObject loadedObject = await assetRef.GetOrLoadAssetAsync(handlerCallback);
             if (loadedObject != null)
-            {
-                loadedObject.AddComponent<AssetReferenceReleaser>();
                 return loadedObject.GetComponent<TType>();
-            }
             return null;
         }
 
@@ -59,31 +67,18 @@ namespace Insthync.AddressableAssetTools
         {
             GameObject loadedObject = assetRef.GetOrLoadAsset(handlerCallback);
             if (loadedObject != null)
-            {
-                loadedObject.AddComponent<AssetReferenceReleaser>();
                 return loadedObject.GetComponent<TType>();
-            }
             return null;
         }
 
         public static async Task<GameObject> GetOrLoadAssetAsync(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
-            GameObject loadedObject = await assetRef.GetOrLoadObjectAsync<GameObject>(handlerCallback);
-            if (loadedObject != null)
-            {
-                loadedObject.AddComponent<AssetReferenceReleaser>();
-            }
-            return loadedObject;
+            return await assetRef.GetOrLoadObjectAsync<GameObject>(handlerCallback);
         }
 
         public static GameObject GetOrLoadAsset(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
-            GameObject loadedObject = assetRef.GetOrLoadObject<GameObject>(handlerCallback);
-            if (loadedObject != null)
-            {
-                loadedObject.AddComponent<AssetReferenceReleaser>();
-            }
-            return loadedObject;
+            return assetRef.GetOrLoadObject<GameObject>(handlerCallback);
         }
 
         public static async Task<TType> GetOrLoadAssetAsyncOrUsePrefab<TType>(this AssetReference assetRef, TType prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
@@ -212,6 +207,29 @@ namespace Insthync.AddressableAssetTools
                 results.Add(assetRef.GetOrLoadAsset(handlerCallback));
             }
             return results.ToArray();
+        }
+        
+        public static void Release<TAssetRef>(this TAssetRef assetRef)
+            where TAssetRef : AssetReference
+        {
+            Release(assetRef.RuntimeKey);
+        }
+
+        public static void Release(object runtimeKey)
+        {
+            if (s_assetRefs.TryGetValue(runtimeKey, out AsyncOperationHandle handler))
+                Addressables.Release(handler);
+            s_assetRefs.Remove(runtimeKey);
+            s_loadedAssets.Remove(runtimeKey);
+        }
+
+        public static void ReleaseAll()
+        {
+            List<object> keys = new List<object>(s_assetRefs.Keys);
+            for (int i = 0; i < keys.Count; ++i)
+            {
+                Release(keys[i]);
+            }
         }
     }
 }
