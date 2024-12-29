@@ -1,5 +1,5 @@
+using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -11,9 +11,11 @@ namespace Insthync.AddressableAssetTools
         private static readonly Dictionary<object, Object> s_loadedAssets = new Dictionary<object, Object>();
         private static readonly Dictionary<object, AsyncOperationHandle> s_assetRefs = new Dictionary<object, AsyncOperationHandle>();
 
-        public static async Task<TType> GetOrLoadObjectAsync<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
+        public static async UniTask<TType> GetOrLoadObjectAsync<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Object
         {
+            if (!assetRef.IsDataValid())
+                return null;
             if (s_loadedAssets.TryGetValue(assetRef.RuntimeKey, out Object result))
                 return result as TType;
             AsyncOperationHandle<TType> handler = Addressables.LoadAssetAsync<TType>(assetRef.RuntimeKey);
@@ -21,7 +23,7 @@ namespace Insthync.AddressableAssetTools
             TType handlerResult;
             try
             {
-                handlerResult = await handler.Task;
+                handlerResult = await handler.ToUniTask();
             }
             catch
             {
@@ -53,7 +55,7 @@ namespace Insthync.AddressableAssetTools
             return handlerResult;
         }
 
-        public static async Task<TType> GetOrLoadAssetAsync<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
+        public static async UniTask<TType> GetOrLoadAssetAsync<TType>(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Component
         {
             GameObject loadedObject = await assetRef.GetOrLoadAssetAsync(handlerCallback);
@@ -71,7 +73,7 @@ namespace Insthync.AddressableAssetTools
             return null;
         }
 
-        public static async Task<GameObject> GetOrLoadAssetAsync(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
+        public static async UniTask<GameObject> GetOrLoadAssetAsync(this AssetReference assetRef, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
             return await assetRef.GetOrLoadObjectAsync<GameObject>(handlerCallback);
         }
@@ -81,7 +83,7 @@ namespace Insthync.AddressableAssetTools
             return assetRef.GetOrLoadObject<GameObject>(handlerCallback);
         }
 
-        public static async Task<TType> GetOrLoadAssetAsyncOrUsePrefab<TType>(this AssetReference assetRef, TType prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
+        public static async UniTask<TType> GetOrLoadAssetAsyncOrUsePrefab<TType>(this AssetReference assetRef, TType prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Component
         {
             TType tempPrefab = null;
@@ -103,7 +105,7 @@ namespace Insthync.AddressableAssetTools
             return tempPrefab;
         }
 
-        public static async Task<TType> GetOrLoadObjectAsyncOrUseAsset<TType>(this AssetReference assetRef, TType asset, System.Action<AsyncOperationHandle> handlerCallback = null)
+        public static async UniTask<TType> GetOrLoadObjectAsyncOrUseAsset<TType>(this AssetReference assetRef, TType asset, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Object
         {
             TType tempAsset = null;
@@ -125,7 +127,7 @@ namespace Insthync.AddressableAssetTools
             return tempAsset;
         }
         
-        public static async Task<GameObject> GetOrLoadAssetAsyncOrUsePrefab(this AssetReference assetRef, GameObject prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
+        public static async UniTask<GameObject> GetOrLoadAssetAsyncOrUsePrefab(this AssetReference assetRef, GameObject prefab, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
             GameObject tempPrefab = null;
             if (assetRef.IsDataValid())
@@ -145,15 +147,15 @@ namespace Insthync.AddressableAssetTools
             return tempPrefab;
         }
 
-        public static async Task<TType[]> GetOrLoadObjectsAsync<TType>(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
+        public static async UniTask<TType[]> GetOrLoadObjectsAsync<TType>(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Object
         {
-            List<Task<TType>> tasks = new List<Task<TType>>();
+            List<UniTask<TType>> tasks = new List<UniTask<TType>>();
             foreach (AssetReference assetRef in assetRefs)
             {
                 tasks.Add(assetRef.GetOrLoadObjectAsync<TType>(handlerCallback));
             }
-            return await Task.WhenAll(tasks);
+            return await UniTask.WhenAll(tasks);
         }
 
         public static TType[] GetOrLoadObjects<TType>(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
@@ -167,15 +169,15 @@ namespace Insthync.AddressableAssetTools
             return results.ToArray();
         }
 
-        public static async Task<TType[]> GetOrLoadAssetsAsync<TType>(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
+        public static async UniTask<TType[]> GetOrLoadAssetsAsync<TType>(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
             where TType : Component
         {
-            List<Task<TType>> tasks = new List<Task<TType>>();
+            List<UniTask<TType>> tasks = new List<UniTask<TType>>();
             foreach (AssetReference assetRef in assetRefs)
             {
                 tasks.Add(assetRef.GetOrLoadAssetAsync<TType>(handlerCallback));
             }
-            return await Task.WhenAll(tasks);
+            return await UniTask.WhenAll(tasks);
         }
 
         public static TType[] GetOrLoadAssets<TType>(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
@@ -189,14 +191,14 @@ namespace Insthync.AddressableAssetTools
             return results.ToArray();
         }
         
-        public static async Task<GameObject[]> GetOrLoadAssetsAsync(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
+        public static async UniTask<GameObject[]> GetOrLoadAssetsAsync(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
         {
-            List<Task<GameObject>> tasks = new List<Task<GameObject>>();
+            List<UniTask<GameObject>> tasks = new List<UniTask<GameObject>>();
             foreach (AssetReference assetRef in assetRefs)
             {
                 tasks.Add(assetRef.GetOrLoadAssetAsync(handlerCallback));
             }
-            return await Task.WhenAll(tasks);
+            return await UniTask.WhenAll(tasks);
         }
 
         public static GameObject[] GetOrLoadAssets(this IEnumerable<AssetReference> assetRefs, System.Action<AsyncOperationHandle> handlerCallback = null)
