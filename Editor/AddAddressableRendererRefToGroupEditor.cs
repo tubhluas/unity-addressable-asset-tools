@@ -15,6 +15,7 @@ namespace Insthync.AddressableAssetTools
         private List<string> _dependencyPaths = new List<string>();
         private Dictionary<string, bool> _dependencySelection = new Dictionary<string, bool>();
         private Vector2 _assetsScrollPosition;
+        private bool _excludeFromOtherGroups = true;
         private Vector2 _dependenciesScrollPosition;
 
         [MenuItem("Tools/Addressables/Add Renderer Dependencies to Group By Assets")]
@@ -82,6 +83,8 @@ namespace Insthync.AddressableAssetTools
 
             EditorGUILayout.Space();
 
+            _excludeFromOtherGroups = EditorGUILayout.Toggle("Exclude From Other Groups", _excludeFromOtherGroups);
+
             if (GUILayout.Button("Find Dependencies of Selected Assets"))
             {
                 FindDependencies();
@@ -146,6 +149,9 @@ namespace Insthync.AddressableAssetTools
                         continue;
 
                     if (_dependencyPaths.Contains(dependencyPath))
+                        continue;
+
+                    if (_excludeFromOtherGroups && IsInAnyAddressableGroup(dependencyPath))
                         continue;
 
                     Object obj = AssetDatabase.LoadAssetAtPath<Object>(dependencyPath);
