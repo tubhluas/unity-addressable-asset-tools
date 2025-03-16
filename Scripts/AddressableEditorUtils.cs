@@ -351,7 +351,17 @@ namespace Insthync.AddressableAssetTools
             if (targetGroup == null)
                 targetGroup = CreateGroup(groupName);
             string guid = aaVar.AssetGUID;
+            if (string.IsNullOrWhiteSpace(guid))
+            {
+                Debug.Log("Asset GUID is null");
+                return;
+            }
             string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                Debug.Log("Asset path is null");
+                return;
+            }
             AddressableAssetEntry entry = settings.FindAssetEntry(guid);
             if (entry != null)
             {
