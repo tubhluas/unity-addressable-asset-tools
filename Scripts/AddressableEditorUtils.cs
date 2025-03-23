@@ -150,7 +150,7 @@ namespace Insthync.AddressableAssetTools
             objs = null;
         }
 
-        public static void ConvertObjectRefToAddressable(object source, System.Type sourceType, string objFieldName, string aaFieldName, string groupName = "Default Local Group")
+        public static void ConvertObjectRefToAddressable(object source, System.Type sourceType, string objFieldName, string aaFieldName, bool clearSourceValue, string groupName = "Default Local Group")
         {
             if (source == null)
                 return;
@@ -212,10 +212,11 @@ namespace Insthync.AddressableAssetTools
                 });
             }
             aaFieldInfo.SetValue(source, aaObject);
-            objFieldInfo.SetValue(source, null);
+            if (clearSourceValue)
+                objFieldInfo.SetValue(source, null);
         }
 
-        public static void ConvertObjectRefsToAddressables(object source, System.Type sourceType, string objsFieldName, string aasFieldName, string groupName = "Default Local Group")
+        public static void ConvertObjectRefsToAddressables(object source, System.Type sourceType, string objsFieldName, string aasFieldName, bool clearSourceValue, string groupName = "Default Local Group")
         {
             if (source == null)
                 return;
@@ -308,7 +309,8 @@ namespace Insthync.AddressableAssetTools
                         aaArr
                     }));
                 }
-                objsFieldInfo.SetValue(source, null);
+                if (clearSourceValue)
+                    objsFieldInfo.SetValue(source, null);
             }
         }
 

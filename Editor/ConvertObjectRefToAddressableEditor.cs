@@ -13,7 +13,8 @@ namespace Insthync.AddressableAssetTools
         private AddressableAssetSettings _settings;
         private AddressableAssetGroup _selectedGroup;
         private AddressableAssetGroup _dirtySelectedGroup;
-        private string _groupName;
+        private string _groupName = string.Empty;
+        private bool _clearSourceValue = true;
         private List<Object> _selectedAssets = new List<Object>();
         private Vector2 _assetsScrollPosition;
 
@@ -53,7 +54,6 @@ namespace Insthync.AddressableAssetTools
                 EditorGUILayout.Space();
             }
             _groupName = EditorGUILayout.TextField("Target Group Name", _groupName);
-
             EditorGUILayout.Space();
 
             GUILayout.Label("Selected Assets:", EditorStyles.boldLabel);
@@ -88,6 +88,7 @@ namespace Insthync.AddressableAssetTools
             }
 
             EditorGUILayout.Space();
+            _clearSourceValue = EditorGUILayout.Toggle("Clear Source Value", _clearSourceValue);
 
             if (GUILayout.Button("Convert"))
             {
@@ -123,11 +124,11 @@ namespace Insthync.AddressableAssetTools
                         AddressableAssetConversionAttribute attr = foundAttr[0] as AddressableAssetConversionAttribute;
                         if (AddressableEditorUtils.IsListOrArray(field.FieldType, out tempElementType))
                         {
-                            AddressableEditorUtils.ConvertObjectRefsToAddressables(asset, objectType, field.Name, attr.AddressableVarName, _groupName);
+                            AddressableEditorUtils.ConvertObjectRefsToAddressables(asset, objectType, field.Name, attr.AddressableVarName, _clearSourceValue, _groupName);
                         }
                         else
                         {
-                            AddressableEditorUtils.ConvertObjectRefToAddressable(asset, objectType, field.Name, attr.AddressableVarName, _groupName);
+                            AddressableEditorUtils.ConvertObjectRefToAddressable(asset, objectType, field.Name, attr.AddressableVarName, _clearSourceValue, _groupName);
                         }
                         continue;
                     }
